@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Crossbin{% endblock %}</title>
+    <meta name="description" content="{% block description %}Crossbin - document sharing and publishing website for text-based information.{% endblock %}">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='crossbin.svg') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='files/crossbin.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+{% include "navbar.html" %}
+{% block content %}{% endblock %}
+{% block scripts %}{% endblock %}
+</body>
+</html>

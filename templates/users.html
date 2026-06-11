@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Crossbin — Users</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='crossbin.svg') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='files/crossbin.css') }}">
+</head>
+<body>
+{% include "navbar.html" %}
+<div class="db-page">
+    <div class="db-manage">
+        <h1 class="db-manage-title">Users — {{ users|length }} registered</h1>
+
+        <div class="db-filter-bar">
+            <input type="text" id="user-search" placeholder="Filter by username..." autocomplete="off">
+            <span id="user-filter-count" class="db-filter-count"></span>
+        </div>
+
+        <table class="db-table" id="users-table">
+            <thead>
+                <tr>
+                    <th class="col-title">Username</th>
+                    <th style="width:120px">Rank</th>
+                    <th style="width:80px; text-align:right">Pastes</th>
+                    <th style="width:100px; text-align:center">Joined</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in users %}
+                <tr data-username="{{ u.username|lower }}"
+                    {% if u.rank in ('owner','admin') %}class="admin-row"{% elif u.rank == 'moderator' %}class="mod-row"{% elif u.rank in ('vip','crim','rich') %}class="donor-row"{% endif %}>
+                    <td class="col-title">
+                        <a class="paste-link" href="{{ url_for('user_profile', username=u.username) }}">{{ u.username }}</a>
+                    </td>
+                    <td>
+                        <a href="{{ url_for('ranks_page') }}" style="text-decoration:none">
+                            <span class="db-rank-badge" style="color:{{ rank_colors[u.rank] }}; border-color:{{ rank_colors[u.rank] }}">{{ u.rank }}</span>
+                        </a>
+                    </td>
+                    <td style="color:#555; text-align:right">{{ paste_counts.get(u.username, 0) }}</td>
+                    <td style="color:#555; text-align:center">{{ u.created_at[:10] }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="4" class="no-pastes">No users yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div style="margin-top:24px">
+            <a href="{{ url_for('index') }}" class="db-plain-back">← Back to home</a>
+        </div>
+    </div>
+</div>
+<script>
+(function() {
+    const input = document.getElementById('user-search');
+    const rows  = document.querySelectorAll('#users-table tbody tr[data-username]');
+    const count = document.getElementById('user-filter-count');
+    input.addEventListener('input', function() {
+        const q = this.value.toLowerCase().trim();
+        let visible = 0;
+        rows.forEach(function(row) {
+            const match = !q || row.dataset.username.includes(q);
+            row.style.display = match ? '' : 'none';
+            if (match) visible++;
+        });
+        count.textContent = q ? visible + ' match' + (visible !== 1 ? 'es' : '') : '';
+    });
+})();
+</script>
+</body>
+</html>
