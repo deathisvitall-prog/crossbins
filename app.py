@@ -1,49 +1,20 @@
-from flask import Flask, render_template, request, url_for, redirect, Response, abort, session, g
-import os, json, sqlite3, secrets, functools
+from flask import Flask, render_template, request, redirect, session, g, abort, Response, url_for
+import os, secrets, functools
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
+import psycopg2
+import psycopg2.extras
 
 app = Flask(__name__)
+app.secret_key = os.environ.get("SECRET_KEY", secrets.token_hex(32))
+DATABASE_URL = os.environ["DATABASE_URL"]
 
 # ─────────────────────────────────────────────
-# 🔥 RENDER PERSISTENT STORAGE FIX
-# ─────────────────────────────────────────────
-DATA = os.environ.get("DATA_PATH", "/var/data")
-
-ADMIN_PASTES = os.path.join(DATA, "admin")
-ANON_PASTES  = os.path.join(DATA, "other")
-META_DIR     = os.path.join(DATA, "meta")
-USERS_DB     = os.path.join(DATA, "users.db")
-SECRET_FILE  = os.path.join(DATA, "secret_key")
-
-for d in [DATA, ADMIN_PASTES, ANON_PASTES, META_DIR]:
-    os.makedirs(d, exist_ok=True)
-
-# ─────────────────────────────────────────────
-# SECRET KEY (PERSISTENT)
-# ─────────────────────────────────────────────
-if os.path.exists(SECRET_FILE):
-    app.secret_key = open(SECRET_FILE).read().strip()
-else:
-    key = secrets.token_hex(32)
-    open(SECRET_FILE, "w").write(key)
-    app.secret_key = key
-
-# ─────────────────────────────────────────────
-# RANK SYSTEM
-# ─────────────────────────────────────────────
-RANKS = ["user", "moderator", "admin", "owner"]
-
-def rank_index(r):
-    return RANKS.index(r) if r in RANKS else 0
-
-# ─────────────────────────────────────────────
-# DATABASE
+# DB
 # ─────────────────────────────────────────────
 def get_db():
     if "db" not in g:
-        g.db = sqlite3.connect(USERS_DB)
-        g.db.row_factory = sqlite3.Row
+        g.db = psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
     return g.db
 
 @app.teardown_appcontext
@@ -52,11 +23,23 @@ def close_db(e=None):
     if db:
         db.close()
 
-def init_db():
-    db = sqlite3.connect(USERS_DB)
+def exec_sql(query, args=(), fetch=False):
+    cur = get_db().cursor()
+    cur.execute(query, args)
+    if fetch:
+        return cur.fetchall()
+    get_db().commit()
 
-    db.execute("""CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+# ─────────────────────────────────────────────
+# INIT TABLES
+# ─────────────────────────────────────────────
+def init_db():
+    db = psycopg2.connect(DATABASE_URL)
+    cur = db.cursor()
+
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
         username TEXT UNIQUE,
         password_hash TEXT,
         rank TEXT DEFAULT 'user',
@@ -65,36 +48,46 @@ def init_db():
         ban_reason TEXT DEFAULT ''
     )""")
 
-    db.execute("""CREATE TABLE IF NOT EXISTS comments (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS pastes (
+        id SERIAL PRIMARY KEY,
+        filename TEXT,
+        content TEXT,
+        author TEXT,
+        created_at TEXT
+    )""")
+
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS comments (
+        id SERIAL PRIMARY KEY,
         paste_id TEXT,
-        paste_type TEXT,
         username TEXT,
         content TEXT,
         created_at TEXT
     )""")
 
-    db.execute("""CREATE TABLE IF NOT EXISTS reports (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS likes (
+        id SERIAL PRIMARY KEY,
         paste_id TEXT,
-        paste_type TEXT,
+        username TEXT,
+        created_at TEXT,
+        UNIQUE(paste_id, username)
+    )""")
+
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS reports (
+        id SERIAL PRIMARY KEY,
+        paste_id TEXT,
         reporter TEXT,
         reason TEXT,
         status TEXT DEFAULT 'open',
         created_at TEXT
     )""")
 
-    db.execute("""CREATE TABLE IF NOT EXISTS likes (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        paste_id TEXT,
-        paste_type TEXT,
-        username TEXT,
-        created_at TEXT,
-        UNIQUE(paste_id, paste_type, username)
-    )""")
-
-    db.execute("""CREATE TABLE IF NOT EXISTS messages (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS messages (
+        id SERIAL PRIMARY KEY,
         from_user TEXT,
         to_user TEXT,
         content TEXT,
@@ -102,8 +95,9 @@ def init_db():
         created_at TEXT
     )""")
 
-    db.execute("""CREATE TABLE IF NOT EXISTS announcements (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS announcements (
+        id SERIAL PRIMARY KEY,
         title TEXT,
         content TEXT,
         author TEXT,
@@ -111,8 +105,9 @@ def init_db():
         created_at TEXT
     )""")
 
-    db.execute("""CREATE TABLE IF NOT EXISTS store_requests (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS store_requests (
+        id SERIAL PRIMARY KEY,
         username TEXT,
         rank TEXT,
         note TEXT,
@@ -121,27 +116,31 @@ def init_db():
     )""")
 
     db.commit()
+    cur.close()
     db.close()
 
 init_db()
 
 # ─────────────────────────────────────────────
-# 🔥 ADMIN ACCOUNT (YOUR REQUEST)
+# ADMIN SEED
 # ─────────────────────────────────────────────
 def create_admin():
-    db = sqlite3.connect(USERS_DB)
+    db = psycopg2.connect(DATABASE_URL)
+    cur = db.cursor()
 
-    admin_user = "admin"
-    admin_pass = "123456"
-
-    if not db.execute("SELECT id FROM users WHERE username=?", (admin_user,)).fetchone():
-        db.execute("""INSERT INTO users (username, password_hash, rank, created_at)
-                      VALUES (?, ?, 'owner', ?)""",
-                   (admin_user,
-                    generate_password_hash(admin_pass),
-                    datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")))
+    cur.execute("SELECT id FROM users WHERE username='admin'")
+    if not cur.fetchone():
+        cur.execute("""
+            INSERT INTO users (username, password_hash, rank, created_at)
+            VALUES (%s,%s,'owner',%s)
+        """, (
+            "admin",
+            generate_password_hash("123456"),
+            datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+        ))
         db.commit()
 
+    cur.close()
     db.close()
 
 create_admin()
@@ -153,7 +152,9 @@ def current_user():
     uid = session.get("user_id")
     if not uid:
         return None
-    return get_db().execute("SELECT * FROM users WHERE id=?", (uid,)).fetchone()
+    cur = get_db().cursor()
+    cur.execute("SELECT * FROM users WHERE id=%s", (uid,))
+    return cur.fetchone()
 
 def login_required(f):
     @functools.wraps(f)
@@ -163,12 +164,17 @@ def login_required(f):
         return f(*a, **k)
     return wrap
 
+def rank_ok(user, required):
+    ranks = ["user","moderator","admin","owner"]
+    return ranks.index(user["rank"]) >= ranks.index(required)
+
 # ─────────────────────────────────────────────
 # INDEX
 # ─────────────────────────────────────────────
 @app.route("/")
 def index():
-    return render_template("index.html")
+    pastes = exec_sql("SELECT * FROM pastes ORDER BY id DESC", fetch=True)
+    return render_template("index.html", pastes=pastes)
 
 # ─────────────────────────────────────────────
 # AUTH
@@ -180,17 +186,21 @@ def register():
         p = request.form["password"]
 
         db = get_db()
-        if db.execute("SELECT 1 FROM users WHERE username=?", (u,)).fetchone():
+        cur = db.cursor()
+
+        cur.execute("SELECT id FROM users WHERE username=%s", (u,))
+        if cur.fetchone():
             return "Taken"
 
-        db.execute("""INSERT INTO users VALUES (NULL,?,?,?,?,0,'')""",
-                   (u, generate_password_hash(p), "user",
-                    datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")))
+        cur.execute("""
+            INSERT INTO users (username,password_hash,rank,created_at)
+            VALUES (%s,%s,'user',%s)
+        """, (u, generate_password_hash(p), datetime.utcnow()))
+
         db.commit()
         return redirect("/login")
 
     return render_template("register.html")
-
 
 @app.route("/login", methods=["GET","POST"])
 def login():
@@ -198,18 +208,20 @@ def login():
         u = request.form["username"]
         p = request.form["password"]
 
-        user = get_db().execute("SELECT * FROM users WHERE username=?", (u,)).fetchone()
+        cur = get_db().cursor()
+        cur.execute("SELECT * FROM users WHERE username=%s", (u,))
+        user = cur.fetchone()
 
         if not user or not check_password_hash(user["password_hash"], p):
             return "Invalid"
 
         if user["banned"]:
-            return f"Banned: {user['ban_reason']}"
+            return "Banned"
 
         session["user_id"] = user["id"]
         return redirect("/")
-    return render_template("login.html")
 
+    return render_template("login.html")
 
 @app.route("/logout")
 def logout():
@@ -217,42 +229,32 @@ def logout():
     return redirect("/")
 
 # ─────────────────────────────────────────────
-# PASTES (FIXED STORAGE)
+# PASTES
 # ─────────────────────────────────────────────
 @app.route("/paste", methods=["POST"])
 def paste():
+    user = current_user()
     content = request.form["content"]
-    file = secrets.token_hex(8) + ".txt"
+    file = secrets.token_hex(8)
 
-    with open(os.path.join(ANON_PASTES, file), "w", encoding="utf-8") as f:
-        f.write(content)
+    exec_sql("""
+        INSERT INTO pastes (filename,content,author,created_at)
+        VALUES (%s,%s,%s,%s)
+    """, (
+        file,
+        content,
+        user["username"] if user else "anon",
+        datetime.utcnow()
+    ))
 
     return redirect("/p/" + file)
 
 @app.route("/p/<file>")
 def view(file):
-    path = os.path.join(ANON_PASTES, file)
-    if not os.path.exists(path):
+    row = exec_sql("SELECT * FROM pastes WHERE filename=%s", (file,), fetch=True)
+    if not row:
         abort(404)
-    return Response(open(path).read(), mimetype="text/plain")
-
-# ─────────────────────────────────────────────
-# BAN SYSTEM
-# ─────────────────────────────────────────────
-@app.route("/ban/<username>", methods=["POST"])
-def ban(username):
-    user = current_user()
-    if not user or rank_index(user["rank"]) < rank_index("moderator"):
-        abort(403)
-
-    reason = request.form.get("reason","")
-
-    get_db().execute(
-        "UPDATE users SET banned=1, ban_reason=? WHERE username=?",
-        (reason, username)
-    )
-    get_db().commit()
-    return redirect("/")
+    return Response(row[0]["content"], mimetype="text/plain")
 
 # ─────────────────────────────────────────────
 # COMMENTS
@@ -261,14 +263,78 @@ def ban(username):
 @login_required
 def comment(file):
     user = current_user()
-    content = request.form["content"]
+    exec_sql("""
+        INSERT INTO comments VALUES (DEFAULT,%s,%s,%s,%s)
+    """, (file, user["username"], request.form["content"], datetime.utcnow()))
+    return redirect("/p/" + file)
 
-    get_db().execute("""INSERT INTO comments VALUES (NULL,?,?,?,?,?)""",
-                     (file, "post", user["username"], content,
-                      datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")))
-    get_db().commit()
+# ─────────────────────────────────────────────
+# LIKES
+# ─────────────────────────────────────────────
+@app.route("/like/<file>")
+@login_required
+def like(file):
+    user = current_user()
+
+    cur = get_db().cursor()
+    cur.execute("SELECT id FROM likes WHERE paste_id=%s AND username=%s", (file,user["username"]))
+    if cur.fetchone():
+        exec_sql("DELETE FROM likes WHERE paste_id=%s AND username=%s", (file,user["username"]))
+    else:
+        exec_sql("INSERT INTO likes VALUES (DEFAULT,%s,%s,%s)", (file,user["username"],datetime.utcnow()))
 
     return redirect("/p/" + file)
+
+# ─────────────────────────────────────────────
+# REPORTS
+# ─────────────────────────────────────────────
+@app.route("/report/<file>", methods=["POST"])
+@login_required
+def report(file):
+    user = current_user()
+    exec_sql("""
+        INSERT INTO reports VALUES (DEFAULT,%s,%s,%s,'open',%s)
+    """, (file,user["username"],request.form["reason"],datetime.utcnow()))
+    return redirect("/p/" + file)
+
+# ─────────────────────────────────────────────
+# BAN
+# ─────────────────────────────────────────────
+@app.route("/ban/<user>", methods=["POST"])
+def ban(user):
+    me = current_user()
+    if not rank_ok(me,"moderator"):
+        abort(403)
+
+    exec_sql("UPDATE users SET banned=1 WHERE username=%s", (user,))
+    return redirect("/")
+
+# ─────────────────────────────────────────────
+# MESSAGES
+# ─────────────────────────────────────────────
+@app.route("/msg/<user>", methods=["POST"])
+@login_required
+def msg(user):
+    me = current_user()
+    exec_sql("""
+        INSERT INTO messages VALUES (DEFAULT,%s,%s,%s,0,%s)
+    """, (me["username"],user,request.form["content"],datetime.utcnow()))
+    return redirect("/")
+
+# ─────────────────────────────────────────────
+# ANNOUNCEMENTS
+# ─────────────────────────────────────────────
+@app.route("/announce", methods=["POST"])
+def announce():
+    me = current_user()
+    if not rank_ok(me,"admin"):
+        abort(403)
+
+    exec_sql("""
+        INSERT INTO announcements VALUES (DEFAULT,%s,%s,%s,0,%s)
+    """, (request.form["title"],request.form["content"],me["username"],datetime.utcnow()))
+
+    return redirect("/")
 
 # ─────────────────────────────────────────────
 # RUN
