@@ -73,24 +73,10 @@
             <a href="{{ url_for('list_of_pages') }}">All Pages</a>
         </div>
 
-        {% if pinned_announcements %}
-        <div class="db-ann-strip">
-            {% for ann in pinned_announcements %}
-            <a class="db-ann-strip-item" href="{{ url_for('announcements') }}">
-                <span class="db-ann-strip-pin">📌</span>
-                <span class="db-ann-strip-title">{{ ann.title }}</span>
-                <span class="db-ann-strip-date">{{ ann.created_at[:10] }}</span>
-            </a>
-            {% endfor %}
-        </div>
-        {% endif %}
-
-        {% if query or active_filter %}
+        {% if query %}
         <div class="db-search-banner">
-            {% if query %}Showing results for <strong>"{{ query }}"</strong>{% endif %}
-            {% if author_filter %} — filtered by author <strong>{{ author_filter }}</strong>{% endif %}
-            {% if tag_filter %} — tag <strong>#{{ tag_filter }}</strong>{% endif %}
-            &mdash; <a href="{{ url_for('index') }}">Clear</a>
+            Showing results for <strong>"{{ query }}"</strong> &mdash;
+            <a href="{{ url_for('index') }}">Clear search</a>
         </div>
         {% endif %}
 
