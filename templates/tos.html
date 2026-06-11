@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Crossbin — Terms of Service</title>
+    <meta name="description" content="Crossbin Terms of Service">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='crossbin.svg') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='files/crossbin.css') }}">
+</head>
+<body>
+
+{% include "navbar.html" %}
+
+<div class="db-plain">
+    <a class="db-plain-back" href="{{ url_for('index') }}">← Back to Home</a>
+    <pre>{{ file_content }}</pre>
+</div>
+
+</body>
+</html>
