@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Crossbin — Ranks</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='crossbin.svg') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='files/crossbin.css') }}">
+</head>
+<body>
+{% include "navbar.html" %}
+<div class="db-page">
+    <div class="db-manage">
+        <h1 class="db-manage-title">Ranks</h1>
+
+        <div class="db-section-title" style="margin-bottom:14px">Donor Ranks</div>
+        <div class="db-ranks-list" style="margin-bottom:32px">
+            {% for rank_name in ['rich', 'crim', 'vip'] %}
+            {% set color = rank_colors[rank_name] %}
+            {% set info  = rank_info[rank_name] %}
+            <div class="db-rank-card" style="border-left-color:{{ color }}">
+                <div class="db-rank-card-header">
+                    <span class="db-rank-card-name" style="color:{{ color }}">{{ rank_name }}</span>
+                    <span class="db-rank-badge" style="color:{{ color }}; border-color:{{ color }}">{{ rank_name }}</span>
+                    <span class="db-rank-card-price" style="color:{{ color }}">{{ info.price }}</span>
+                </div>
+                <p class="db-rank-card-desc">{{ info.desc }}</p>
+                <ul class="db-rank-card-perms">
+                    {% for perm in info.perms %}
+                    <li>{{ perm }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="db-section-title" style="margin-bottom:14px">Base Rank</div>
+        <div class="db-ranks-list" style="margin-bottom:32px">
+            {% set color = rank_colors['user'] %}
+            {% set info  = rank_info['user'] %}
+            <div class="db-rank-card" style="border-left-color:{{ color }}">
+                <div class="db-rank-card-header">
+                    <span class="db-rank-card-name" style="color:{{ color }}">user</span>
+                    <span class="db-rank-badge" style="color:{{ color }}; border-color:{{ color }}">user</span>
+                    <span class="db-rank-card-price" style="color:#444">{{ info.price }}</span>
+                </div>
+                <p class="db-rank-card-desc">{{ info.desc }}</p>
+                <ul class="db-rank-card-perms">
+                    {% for perm in info.perms %}
+                    <li>{{ perm }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+
+        <div style="margin-top:8px; display:flex; gap:16px; flex-wrap:wrap">
+            <a href="{{ url_for('store') }}" class="db-plain-back">Buy a donor rank →</a>
+            <a href="{{ url_for('staff_list') }}" class="db-plain-back">View staff →</a>
+            <a href="{{ url_for('index') }}" class="db-plain-back">← Back to home</a>
+        </div>
+    </div>
+</div>
+</body>
+</html>

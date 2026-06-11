@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Crossbin — Announcements</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='crossbin.svg') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='files/crossbin.css') }}">
+</head>
+<body>
+{% include "navbar.html" %}
+<div class="db-page">
+    <div class="db-manage">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; border-bottom:1px solid #1a1a1a; padding-bottom:8px;">
+            <h1 class="db-manage-title" style="margin:0; border:none; padding:0">Announcements</h1>
+            {% if current_user and current_user.rank in ('admin','owner') %}
+            <a href="{{ url_for('new_announcement') }}" class="db-btn" style="font-size:11px; padding:4px 12px">+ New</a>
+            {% endif %}
+        </div>
+
+        {% if not announcements %}
+        <p style="color:#333; font-style:italic; text-align:center; margin-top:48px">No announcements yet.</p>
+        {% endif %}
+
+        {% for ann in announcements %}
+        <div class="db-ann-card {% if ann.pinned %}db-ann-pinned{% endif %}">
+            <div class="db-ann-header">
+                <span class="db-ann-title">
+                    {% if ann.pinned %}<span class="db-ann-pin-icon">📌</span>{% endif %}
+                    {{ ann.title }}
+                </span>
+                <div class="db-ann-meta">
+                    {% set auser = ann.author %}
+                    <a href="{{ url_for('user_profile', username=auser) }}" style="color:{{ rank_colors.get('admin','#ff8800') }}; text-decoration:none">{{ auser }}</a>
+                    <span style="color:#333">·</span>
+                    <span style="color:#444">{{ ann.created_at[:10] }}</span>
+                    {% if current_user and current_user.rank in ('admin','owner') %}
+                    <form method="POST" action="{{ url_for('toggle_pin', ann_id=ann.id) }}" style="display:inline">
+                        <button type="submit" class="db-ann-action-btn">{{ 'Unpin' if ann.pinned else 'Pin' }}</button>
+                    </form>
+                    <form method="POST" action="{{ url_for('delete_announcement', ann_id=ann.id) }}" style="display:inline" onsubmit="return confirm('Delete this announcement?')">
+                        <button type="submit" class="db-ann-action-btn red">Delete</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="db-ann-body">{{ ann.content }}</div>
+        </div>
+        {% endfor %}
+
+        <div style="margin-top:32px">
+            <a href="{{ url_for('index') }}" class="db-plain-back">← Back to home</a>
+        </div>
+    </div>
+</div>
+</body>
+</html>

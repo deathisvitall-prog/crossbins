@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Crossbin — {{ profile_user.username }}</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='crossbin.svg') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='files/crossbin.css') }}">
+</head>
+<body>
+{% include "navbar.html" %}
+<div class="db-page">
+    <div class="db-profile">
+
+        <div class="db-profile-header" style="border-top: 3px solid {{ profile_user.profile_color if profile_user.profile_color else rank_colors[profile_user.rank] }}">
+            <div class="db-profile-header-main">
+                <span class="db-profile-name" style="color:{{ rank_colors[profile_user.rank] }}">{{ profile_user.username }}</span>
+                <a href="{{ url_for('ranks_page') }}" style="text-decoration:none">
+                    <span class="db-rank-badge" style="color:{{ rank_colors[profile_user.rank] }}; border-color:{{ rank_colors[profile_user.rank] }}">{{ profile_user.rank }}</span>
+                </a>
+                {% if profile_user.banned %}
+                <span class="db-vis-badge db-vis-private">banned</span>
+                {% endif %}
+            </div>
+            <div class="db-profile-meta-row">
+                <span class="db-profile-meta-item">Member since {{ profile_user.created_at[:10] }}</span>
+                <span class="db-profile-meta-sep">·</span>
+                {% set total = admin_pastes|length + anon_pastes|length %}
+                <span class="db-profile-meta-item">{{ total }} paste{% if total != 1 %}s{% endif %}</span>
+                {% if admin_pastes %}
+                <span class="db-profile-meta-sep">·</span>
+                <span class="db-profile-meta-item" style="color:#883333">{{ admin_pastes|length }} admin</span>
+                {% endif %}
+                {% if total_views > 0 %}
+                <span class="db-profile-meta-sep">·</span>
+                <span class="db-profile-meta-item" style="color:#555">{{ total_views }} views</span>
+                {% endif %}
+            </div>
+            {% if profile_user.bio %}
+            <div class="db-profile-bio">{{ profile_user.bio }}</div>
+            {% else %}
+            <div class="db-profile-rank-desc">{{ rank_info[profile_user.rank].desc }}</div>
+            {% endif %}
+            <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap">
+                <a href="{{ url_for('index') }}?author={{ profile_user.username }}" class="db-dash-link">View Pastes</a>
+                {% if current_user and current_user.username != profile_user.username %}
+                <a href="{{ url_for('conversation', username=profile_user.username) }}" class="db-dash-link">Send Message</a>
+                {% endif %}
+                {% if current_user and current_user.username == profile_user.username %}
+                <a href="{{ url_for('settings') }}" class="db-dash-link">Edit Profile</a>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if admin_pastes %}
+        <div class="db-section-title">Admin Pastes</div>
+        <table class="db-table">
+            <thead>
+                <tr>
+                    <th class="col-title">Title</th>
+                    <th class="col-date">Date</th>
+                    <th class="col-size">Size</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in admin_pastes %}
+                <tr class="admin-row">
+                    <td class="col-title"><a class="paste-link" href="{{ url_for('admin_post', file=p.name) }}" title="{{ p.name }}">{{ p.name }}</a></td>
+                    <td class="col-date" style="color:#555">{{ p.creation_date }}</td>
+                    <td class="col-size" style="color:#444">{{ p.size }} KB</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+
+        {% if anon_pastes %}
+        <div class="db-section-title" style="margin-top:24px">Pastes</div>
+        <table class="db-table">
+            <thead>
+                <tr>
+                    <th class="col-title">Title</th>
+                    <th class="col-date">Date</th>
+                    <th class="col-size">Size</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in anon_pastes %}
+                <tr>
+                    <td class="col-title"><a class="paste-link" href="{{ url_for('post', file=p.name) }}" title="{{ p.name }}">{{ p.name }}</a></td>
+                    <td class="col-date" style="color:#555">{{ p.creation_date }}</td>
+                    <td class="col-size" style="color:#444">{{ p.size }} KB</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+
+        {% if not admin_pastes and not anon_pastes %}
+        <p style="color:#333; text-align:center; margin-top:48px; font-style:italic;">No pastes yet.</p>
+        {% endif %}
+
+        <div style="margin-top:32px">
+            <a href="{{ url_for('index') }}" class="db-plain-back">← Back to home</a>
+        </div>
+
+    </div>
+</div>
+</body>
+</html>

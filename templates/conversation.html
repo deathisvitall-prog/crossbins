@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Crossbin — {{ target.username }}</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='crossbin.svg') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='files/crossbin.css') }}">
+</head>
+<body>
+{% include "navbar.html" %}
+<div class="db-page">
+    <div class="db-manage db-convo-wrap">
+        <div class="db-convo-header">
+            <a href="{{ url_for('messages') }}" class="db-plain-back" style="font-size:12px">← Inbox</a>
+            <span class="db-convo-title">
+                <a href="{{ url_for('user_profile', username=target.username) }}" style="color:{{ rank_colors[target.rank] }}; text-decoration:none">{{ target.username }}</a>
+                <span class="db-rank-badge" style="color:{{ rank_colors[target.rank] }}; border-color:{{ rank_colors[target.rank] }}; font-size:9px; padding:1px 5px">{{ target.rank }}</span>
+            </span>
+        </div>
+
+        <div class="db-convo-thread" id="thread">
+            {% if not thread %}
+            <p style="color:#333; font-style:italic; font-size:12px; text-align:center; margin:24px 0">No messages yet. Say hello.</p>
+            {% endif %}
+            {% for msg in thread %}
+            <div class="db-msg {% if msg.from_user == current_user.username %}db-msg-mine{% else %}db-msg-theirs{% endif %}">
+                <div class="db-msg-meta">
+                    <span class="db-msg-author">{{ msg.from_user }}</span>
+                    <span class="db-msg-time">{{ msg.created_at[:16] }}</span>
+                    {% if msg.from_user == current_user.username or current_user.rank in ('moderator','admin','owner') %}
+                    <form method="POST" action="{{ url_for('delete_message', mid=msg.id) }}" style="display:inline" onsubmit="return confirm('Delete message?')">
+                        <button type="submit" class="db-comment-delete" style="font-size:12px">×</button>
+                    </form>
+                    {% endif %}
+                </div>
+                <div class="db-msg-body">{{ msg.content }}</div>
+            </div>
+            {% endfor %}
+            <div id="bottom"></div>
+        </div>
+
+        <form class="db-convo-compose" method="POST">
+            <textarea name="content" placeholder="Write a message..." maxlength="2000" rows="3" required autocomplete="off"></textarea>
+            <button type="submit" class="db-btn" style="margin-top:6px">Send</button>
+        </form>
+    </div>
+</div>
+<script>document.getElementById("thread").scrollTop = 99999;</script>
+</body>
+</html>

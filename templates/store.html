@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Crossbin — Store</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='crossbin.svg') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='files/crossbin.css') }}">
+</head>
+<body>
+{% include "navbar.html" %}
+<div class="db-page">
+    <div class="db-manage">
+        <h1 class="db-manage-title">Store — Donor Ranks</h1>
+
+        <p class="db-store-intro">
+            Support the site and stand out with an exclusive donor rank.
+            Purchase via the contact listed below, then submit a request and an admin will approve it.
+        </p>
+
+        <div class="db-store-cards">
+            {% for rank_name in ['rich', 'crim', 'vip'] %}
+            {% set color = rank_colors[rank_name] %}
+            {% set info  = rank_info[rank_name] %}
+            <div class="db-store-card" style="border-top-color:{{ color }}">
+                <div class="db-store-card-top">
+                    <span class="db-store-card-name" style="color:{{ color }}">{{ rank_name }}</span>
+                    <span class="db-store-card-price" style="color:{{ color }}">{{ info.price }}</span>
+                </div>
+                <p class="db-store-card-desc">{{ info.desc }}</p>
+                <ul class="db-rank-card-perms" style="margin-bottom:16px">
+                    {% for perm in info.perms %}
+                    <li>{{ perm }}</li>
+                    {% endfor %}
+                </ul>
+                {% if current_user %}
+                <form method="POST" action="{{ url_for('store') }}">
+                    <input type="hidden" name="rank" value="{{ rank_name }}">
+                    <div class="db-auth-field" style="margin-bottom:6px">
+                        <input type="text" name="note" placeholder="Payment note / proof (optional)" maxlength="300">
+                    </div>
+                    <button type="submit" class="db-btn db-store-buy-btn" style="border-color:{{ color }}; color:{{ color }}">
+                        Request {{ rank_name }}
+                    </button>
+                </form>
+                {% else %}
+                <a href="{{ url_for('login', next='/store') }}" class="db-btn" style="display:block; text-align:center; border-color:{{ color }}; color:{{ color }}">
+                    Login to request
+                </a>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+
+        {% if error %}
+        <div class="db-store-msg db-store-msg-error">{{ error }}</div>
+        {% endif %}
+        {% if success %}
+        <div class="db-store-msg db-store-msg-success">{{ success }}</div>
+        {% endif %}
+
+        {% if current_user and current_user.rank in ('admin', 'owner') %}
+        <div style="margin-top:28px">
+            <a href="{{ url_for('store_requests') }}" class="db-plain-back">View pending requests →</a>
+        </div>
+        {% endif %}
+
+        <div style="margin-top:16px">
+            <a href="{{ url_for('index') }}" class="db-plain-back">← Back to home</a>
+        </div>
+    </div>
+</div>
+</body>
+</html>

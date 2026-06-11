@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Crossbin — Hall of Loosers</title>
+    <meta name="description" content="Here lies the bullied, antisocial & doxed rejects who stepped into the wrong side of the internet.">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='crossbin.svg') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='files/crossbin.css') }}">
+</head>
+<body>
+
+{% include "navbar.html" %}
+
+<div class="db-hol">
+    <div class="db-hol-header">
+        <pre>  ____                    _     _       
+ / ___|_ __ ___  ___ ___| |__ (_)_ __  
+| |   | '__/ _ \/ __/ __|| '_ \| | '_ \ 
+| |___| | | (_) \__ \__ \| |_) | | | | |
+ \____|_|  \___/|___/___/|_.__/|_|_| |_|</pre>
+        <div class="db-hol-title">HALL OF LOOSERS</div>
+    </div>
+
+    <div class="db-hol-grid">
+        {% for looser in loosers_list %}
+        <div class="db-hol-card">
+            <div class="db-hol-img">
+                <img src="{{ looser.image }}" alt="{{ looser.topic }}">
+            </div>
+            <div class="db-hol-name">{{ looser.topic }}</div>
+            <div class="db-hol-desc">
+                <b>{{ looser.subtopic }}</b><br>
+                {% for line in looser.body %}{{ line }}<br>{% endfor %}
+            </div>
+        </div>
+        {% else %}
+        <p style="color:#444; text-align:center; width:100%;">No entries yet.</p>
+        {% endfor %}
+    </div>
+</div>
+
+</body>
+</html>

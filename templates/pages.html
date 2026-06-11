@@ -1,0 +1,76 @@
+{% extends "navbar.html" %}
+
+{% block top %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Crossbin — All Pages</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='crossbin.svg') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='files/crossbin.css') }}">
+</head>
+<body>
+{% endblock %}
+
+{% block bottom %}
+<div class="db-pages">
+    <h1>All Pages</h1>
+
+    <div class="db-page-entry">
+        <a href="{{ url_for('index') }}">/</a>
+        <p>Home — paste listing and search.</p>
+    </div>
+    <div class="db-page-entry">
+        <a href="{{ url_for('new_paste') }}">/new</a>
+        <p>New Paste — create an anonymous paste.</p>
+    </div>
+    <div class="db-page-entry">
+        <a href="{{ url_for('tos') }}">/tos</a>
+        <p>Terms of Service.</p>
+    </div>
+    <div class="db-page-entry">
+        <a href="{{ url_for('staff_list') }}">/staff</a>
+        <p>Staff — list of moderators, admins, and owners.</p>
+    </div>
+    <div class="db-page-entry">
+        <a href="{{ url_for('user_list') }}">/users</a>
+        <p>Users — all registered members.</p>
+    </div>
+    <div class="db-page-entry">
+        <a href="{{ url_for('ranks_page') }}">/ranks</a>
+        <p>Ranks — rank hierarchy, descriptions, and permissions.</p>
+    </div>
+    <div class="db-page-entry">
+        <a href="{{ url_for('store') }}">/store</a>
+        <p>Store — purchase donor ranks (VIP, Crim, Rich).</p>
+    </div>
+    <div class="db-page-entry">
+        <a href="{{ url_for('hall_of_loosers') }}">/hol</a>
+        <p>Hall of Loosers — doxed rejects of the internet.</p>
+    </div>
+    <div class="db-page-entry">
+        <a href="{{ url_for('list_of_pages') }}">/pages</a>
+        <p>This page — list of all public routes.</p>
+    </div>
+    <div class="db-page-entry">
+        <a href="/post/&lt;title&gt;">/post/&lt;title&gt;</a>
+        <p>View an anonymous paste.</p>
+    </div>
+    <div class="db-page-entry">
+        <a href="/admin/&lt;title&gt;">/admin/&lt;title&gt;</a>
+        <p>View an admin paste.</p>
+    </div>
+    <div class="db-page-entry">
+        <a href="/raw/post/&lt;title&gt;">/raw/post/&lt;title&gt;</a>
+        <p>View raw plain-text of an anonymous paste.</p>
+    </div>
+    <div class="db-page-entry">
+        <a href="/raw/admin/&lt;title&gt;">/raw/admin/&lt;title&gt;</a>
+        <p>View raw plain-text of an admin paste.</p>
+    </div>
+</div>
+</body>
+</html>
+{% endblock %}

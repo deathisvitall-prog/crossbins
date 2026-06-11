@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Crossbin — Reports</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='crossbin.svg') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='files/crossbin.css') }}">
+</head>
+<body>
+{% include "navbar.html" %}
+<div class="db-page">
+    <div class="db-manage">
+        <h1 class="db-manage-title">Reports</h1>
+
+        <table class="db-table">
+            <thead>
+                <tr>
+                    <th style="width:40px">#</th>
+                    <th class="col-title">Paste</th>
+                    <th style="width:60px; text-align:center">Type</th>
+                    <th style="width:90px">Reporter</th>
+                    <th class="col-title">Reason</th>
+                    <th style="width:80px; text-align:center">Status</th>
+                    <th style="width:95px; text-align:center">Date</th>
+                    <th style="width:110px">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in reports_list %}
+                <tr {% if r.status == 'open' %}class="mod-row"{% endif %}>
+                    <td style="color:#333">{{ r.id }}</td>
+                    <td class="col-title">
+                        <a class="paste-link" href="{{ url_for('post' if r.paste_type == 'post' else 'admin_post', file=r.paste_id) }}" title="{{ r.paste_id }}">{{ r.paste_id }}</a>
+                    </td>
+                    <td style="text-align:center; font-size:10px; color:#555; text-transform:uppercase">{{ r.paste_type }}</td>
+                    <td style="color:#666; font-size:11px">{{ r.reporter }}</td>
+                    <td class="col-title" style="color:#555; font-size:11px">{{ r.reason[:100] }}</td>
+                    <td style="text-align:center">
+                        <span class="db-req-status db-req-status-{{ 'pending' if r.status == 'open' else 'approved' }}">{{ r.status }}</span>
+                    </td>
+                    <td style="color:#444; text-align:center; font-size:11px">{{ r.created_at[:10] }}</td>
+                    <td>
+                        {% if r.status == 'open' %}
+                        <form method="POST" action="{{ url_for('resolve_report', rid=r.id) }}" style="display:inline">
+                            <button type="submit" class="db-btn" style="padding:3px 8px; font-size:11px">Resolve</button>
+                        </form>
+                        {% else %}
+                        <span style="color:#333; font-size:11px; font-style:italic;">done</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="8" class="no-pastes">No reports yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div style="margin-top:24px">
+            <a href="{{ url_for('dashboard') }}" class="db-plain-back">← Dashboard</a>
+        </div>
+    </div>
+</div>
+</body>
+</html>

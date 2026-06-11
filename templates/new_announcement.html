@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Crossbin — New Announcement</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='crossbin.svg') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='files/crossbin.css') }}">
+</head>
+<body>
+{% include "navbar.html" %}
+<div class="db-page">
+    <div class="db-manage" style="max-width:600px">
+        <h1 class="db-manage-title">New Announcement</h1>
+
+        {% if error %}
+        <div class="db-store-msg db-store-msg-error" style="margin-bottom:16px">{{ error }}</div>
+        {% endif %}
+
+        <form method="POST">
+            <div class="db-auth-field">
+                <label>Title</label>
+                <input type="text" name="title" maxlength="100" required autocomplete="off" placeholder="Announcement title">
+            </div>
+            <div class="db-auth-field" style="margin-top:10px">
+                <label>Content</label>
+                <textarea name="content" maxlength="2000" rows="6" required placeholder="Announcement text..." style="width:100%; background:#181818; border:1px solid #2a2a2a; color:#ccc; padding:8px; font-family:inherit; font-size:12px; resize:vertical; outline:none; border-radius:2px;"></textarea>
+            </div>
+            <div class="db-auth-field" style="margin-top:10px; flex-direction:row; align-items:center; gap:8px">
+                <input type="checkbox" name="pinned" id="pinned" value="1">
+                <label for="pinned" style="cursor:pointer">Pin this announcement</label>
+            </div>
+            <button type="submit" class="db-btn" style="margin-top:14px; padding:7px 20px">Post Announcement</button>
+        </form>
+
+        <div style="margin-top:20px">
+            <a href="{{ url_for('announcements') }}" class="db-plain-back">← Back to announcements</a>
+        </div>
+    </div>
+</div>
+</body>
+</html>

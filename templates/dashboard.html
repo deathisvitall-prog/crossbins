@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Crossbin — Dashboard</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='crossbin.svg') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='files/crossbin.css') }}">
+</head>
+<body>
+{% include "navbar.html" %}
+<div class="db-page">
+    <div class="db-manage">
+        <h1 class="db-manage-title">Admin Dashboard</h1>
+
+        <div class="db-dash-grid">
+            <div class="db-dash-stat">
+                <div class="db-dash-stat-num">{{ stats.total_users }}</div>
+                <div class="db-dash-stat-label">Users</div>
+            </div>
+            <div class="db-dash-stat">
+                <div class="db-dash-stat-num">{{ stats.admin_pastes + stats.anon_pastes }}</div>
+                <div class="db-dash-stat-label">Total Pastes</div>
+            </div>
+            <div class="db-dash-stat">
+                <div class="db-dash-stat-num">{{ stats.admin_pastes }}</div>
+                <div class="db-dash-stat-label">Admin Pastes</div>
+            </div>
+            <div class="db-dash-stat">
+                <div class="db-dash-stat-num">{{ stats.anon_pastes }}</div>
+                <div class="db-dash-stat-label">Anon Pastes</div>
+            </div>
+            <div class="db-dash-stat">
+                <div class="db-dash-stat-num">{{ stats.total_comments }}</div>
+                <div class="db-dash-stat-label">Comments</div>
+            </div>
+            <div class="db-dash-stat {% if stats.open_reports > 0 %}db-dash-stat-warn{% endif %}">
+                <div class="db-dash-stat-num">{{ stats.open_reports }}</div>
+                <div class="db-dash-stat-label">Open Reports</div>
+            </div>
+            <div class="db-dash-stat {% if stats.pending_store > 0 %}db-dash-stat-warn{% endif %}">
+                <div class="db-dash-stat-num">{{ stats.pending_store }}</div>
+                <div class="db-dash-stat-label">Pending Store</div>
+            </div>
+            <div class="db-dash-stat">
+                <div class="db-dash-stat-num">{{ stats.announcements }}</div>
+                <div class="db-dash-stat-label">Announcements</div>
+            </div>
+        </div>
+
+        <div class="db-dash-links">
+            <a href="{{ url_for('manage_users') }}" class="db-dash-link">Manage Users</a>
+            <a href="{{ url_for('reports') }}" class="db-dash-link">View Reports</a>
+            <a href="{{ url_for('store_requests') }}" class="db-dash-link">Store Requests</a>
+            <a href="{{ url_for('announcements') }}" class="db-dash-link">Announcements</a>
+            <a href="{{ url_for('admin_site_settings') }}" class="db-dash-link">Site Settings</a>
+        </div>
+
+        {% if recent_reports %}
+        <div class="db-section-title" style="margin-top:32px; margin-bottom:10px">Open Reports</div>
+        <table class="db-table">
+            <thead>
+                <tr>
+                    <th class="col-title">Paste</th>
+                    <th style="width:90px">Reporter</th>
+                    <th class="col-title">Reason</th>
+                    <th style="width:90px; text-align:center">Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in recent_reports %}
+                <tr>
+                    <td class="col-title">
+                        <a class="paste-link" href="{{ url_for(r.paste_type if r.paste_type == 'post' else 'admin_post', file=r.paste_id) }}">{{ r.paste_id }}</a>
+                    </td>
+                    <td style="color:#666; font-size:11px">{{ r.reporter }}</td>
+                    <td class="col-title" style="color:#555; font-size:11px">{{ r.reason[:80] }}</td>
+                    <td style="color:#444; text-align:center; font-size:11px">{{ r.created_at[:10] }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+
+        {% if recent_users %}
+        <div class="db-section-title" style="margin-top:32px; margin-bottom:10px">Recent Registrations</div>
+        <table class="db-table">
+            <thead>
+                <tr>
+                    <th class="col-title">Username</th>
+                    <th style="width:110px">Rank</th>
+                    <th style="width:100px; text-align:center">Joined</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in recent_users %}
+                <tr>
+                    <td class="col-title">
+                        <a class="paste-link" href="{{ url_for('user_profile', username=u.username) }}">{{ u.username }}</a>
+                    </td>
+                    <td><span class="db-rank-badge" style="color:{{ rank_colors[u.rank] }}; border-color:{{ rank_colors[u.rank] }}">{{ u.rank }}</span></td>
+                    <td style="color:#555; text-align:center">{{ u.created_at[:10] }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+
+        <div style="margin-top:32px">
+            <a href="{{ url_for('index') }}" class="db-plain-back">← Back to home</a>
+        </div>
+    </div>
+</div>
+</body>
+</html>

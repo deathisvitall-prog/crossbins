@@ -1,0 +1,51 @@
+{% block top %}
+{% endblock %}
+
+<nav class="db-nav">
+    <div class="db-nav-inner">
+        <a class="db-nav-brand" href="{{ url_for('index') }}">Crossbin</a>
+
+        <div class="db-nav-links">
+            <a href="{{ url_for('index') }}">Home</a>
+            <a href="{{ url_for('new_paste') }}">New Paste</a>
+            <a href="{{ url_for('announcements') }}">News</a>
+            <a href="{{ url_for('staff_list') }}">Staff</a>
+            <a href="{{ url_for('user_list') }}">Users</a>
+            <a href="{{ url_for('ranks_page') }}">Ranks</a>
+            <a href="{{ url_for('store') }}" style="color:#aa44ff">Store</a>
+            <a href="{{ url_for('hall_of_loosers') }}">HOL</a>
+            <a href="{{ url_for('tos') }}">TOS</a>
+        </div>
+
+        <form class="db-search-form" action="{{ url_for('index') }}" method="GET">
+            <input type="text" name="q" placeholder="Search pastes..." value="{{ request.args.get('q', '') }}" autocomplete="off">
+            <button type="submit">Search</button>
+        </form>
+
+        <div class="db-nav-auth">
+            {% if current_user %}
+                <a href="{{ url_for('user_profile', username=current_user.username) }}" class="db-nav-user-link">
+                    <span class="db-nav-username" style="color:{{ current_rank_color }}">{{ current_user.username }}</span>
+                    <span class="db-nav-rank-badge" style="color:{{ current_rank_color }}; border-color:{{ current_rank_color }}">{{ current_user.rank }}</span>
+                </a>
+                <a href="{{ url_for('messages') }}" class="db-nav-auth-link db-nav-msg-link">
+                    Messages{% if unread_messages > 0 %}<span class="db-nav-msg-badge">{{ unread_messages }}</span>{% endif %}
+                </a>
+                <a href="{{ url_for('settings') }}" class="db-nav-auth-link">Settings</a>
+                {% if current_user.rank in ('admin', 'owner') %}
+                <a href="{{ url_for('dashboard') }}" class="db-nav-auth-link">Dashboard</a>
+                {% endif %}
+                {% if current_user.rank in ('moderator', 'admin', 'owner') %}
+                <a href="{{ url_for('reports') }}" class="db-nav-auth-link">Reports</a>
+                {% endif %}
+                <a href="{{ url_for('logout') }}" class="db-nav-auth-link">Logout</a>
+            {% else %}
+                <a href="{{ url_for('login') }}" class="db-nav-auth-link">Login</a>
+                <a href="{{ url_for('register') }}" class="db-nav-auth-link db-nav-auth-register">Register</a>
+            {% endif %}
+        </div>
+    </div>
+</nav>
+
+{% block bottom %}
+{% endblock %}

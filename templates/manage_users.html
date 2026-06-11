@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Crossbin — Manage Users</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='crossbin.svg') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='files/crossbin.css') }}">
+</head>
+<body>
+{% include "navbar.html" %}
+<div class="db-page">
+    <div class="db-manage">
+        <h1 class="db-manage-title">Manage Users</h1>
+
+        <table class="db-table">
+            <thead>
+                <tr>
+                    <th class="col-title">Username</th>
+                    <th style="width:90px">Rank</th>
+                    <th style="width:90px">Joined</th>
+                    <th style="width:280px">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in users %}
+                <tr {% if u.rank == 'owner' %}class="admin-row"{% endif %}>
+                    <td class="col-title">
+                        <a class="paste-link" href="{{ url_for('user_profile', username=u.username) }}">{{ u.username }}</a>
+                        {% if u.banned %}<span class="db-vis-badge db-vis-private" style="font-size:9px; margin-left:4px">banned</span>{% endif %}
+                    </td>
+                    <td>
+                        <span style="color:{{ rank_colors[u.rank] }}">{{ u.rank }}</span>
+                    </td>
+                    <td style="color:#555">{{ u.created_at[:10] }}</td>
+                    <td>
+                        {% if u.username != current_user.username %}
+                        <form method="POST" action="{{ url_for('update_user_rank', username=u.username) }}" style="display:inline-flex; gap:4px; align-items:center;">
+                            <select name="rank" class="db-rank-select">
+                                {% for r in RANKS %}
+                                <option value="{{ r }}" {% if r == u.rank %}selected{% endif %}>{{ r }}</option>
+                                {% endfor %}
+                            </select>
+                            <button type="submit" class="db-btn" style="padding:3px 8px; font-size:11px;">Set</button>
+                        </form>
+                        {% if u.banned %}
+                        <form method="POST" action="{{ url_for('unban_user', username=u.username) }}" style="display:inline" onsubmit="return confirm('Unban {{ u.username }}?')">
+                            <button type="submit" class="db-btn" style="padding:3px 8px; font-size:11px; margin-left:2px; color:#44cc44; border-color:#44cc4444">Unban</button>
+                        </form>
+                        {% elif u.rank not in ('owner', 'admin') or current_user.rank == 'owner' %}
+                        <button class="db-btn" style="padding:3px 8px; font-size:11px; margin-left:2px; color:#cc2244; border-color:#cc224444"
+                                onclick="document.getElementById('ban-modal-{{ u.username }}').style.display='flex'">Ban</button>
+                        {% endif %}
+                        {% if current_user.rank == 'owner' %}
+                        <form method="POST" action="{{ url_for('delete_user', username=u.username) }}" style="display:inline;" onsubmit="return confirm('Delete user {{ u.username }}? This cannot be undone.')">
+                            <button type="submit" class="db-btn red" style="padding:3px 8px; font-size:11px; margin-left:2px;">Delete</button>
+                        </form>
+                        {% endif %}
+                        {% else %}
+                        <span style="color:#333; font-size:11px; font-style:italic;">you</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="4" class="no-pastes">No users yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div style="margin-top:24px">
+            <a href="{{ url_for('index') }}" class="db-plain-back">← Back to home</a>
+        </div>
+    </div>
+</div>
+
+{% for u in users %}
+{% if u.username != current_user.username and not u.banned %}
+<div class="db-modal-overlay" id="ban-modal-{{ u.username }}" style="display:none" onclick="if(event.target===this)this.style.display='none'">
+    <div class="db-modal">
+        <div class="db-modal-title">Ban {{ u.username }}</div>
+        <form method="POST" action="{{ url_for('ban_user', username=u.username) }}">
+            <div class="db-auth-field">
+                <label>Reason (optional)</label>
+                <input type="text" name="reason" maxlength="200" placeholder="Rule violation, spam, etc." autocomplete="off">
+            </div>
+            <div style="display:flex; gap:8px; margin-top:12px">
+                <button type="submit" class="db-btn red">Confirm Ban</button>
+                <button type="button" class="db-btn" onclick="document.getElementById('ban-modal-{{ u.username }}').style.display='none'">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+{% endfor %}
+</body>
+</html>
