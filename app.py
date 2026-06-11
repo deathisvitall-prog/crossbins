@@ -1,17 +1,16 @@
 import os
 import psycopg2
 from flask import Flask, render_template, request, redirect, url_for, session, g
-from datetime import datetime
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
+app.secret_key = os.environ.get("SECRET_KEY", "dev-key")
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
 
-# ----------------------------
-# DATABASE CONNECTION
-# ----------------------------
+# ------------------------
+# DB CONNECTION
+# ------------------------
 def get_db():
     if "db" not in g:
         g.db = psycopg2.connect(DATABASE_URL, sslmode="require")
@@ -19,20 +18,20 @@ def get_db():
 
 
 @app.teardown_appcontext
-def close_db(exception):
+def close_db(_):
     db = g.pop("db", None)
-    if db is not None:
+    if db:
         db.close()
 
 
-# ----------------------------
-# INIT DATABASE
-# ----------------------------
+# ------------------------
+# INIT DATABASE (SAFE)
+# ------------------------
 def init_db():
     conn = psycopg2.connect(DATABASE_URL, sslmode="require")
     cur = conn.cursor()
 
-    # USERS TABLE
+    # USERS
     cur.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY,
@@ -41,18 +40,17 @@ def init_db():
         )
     """)
 
-    # PASTES TABLE (FIXED SCHEMA - includes title)
+    # PASTES (SAFE VERSION — avoids your missing column issue)
     cur.execute("""
         CREATE TABLE IF NOT EXISTS pastes (
             id SERIAL PRIMARY KEY,
-            title TEXT NOT NULL,
             content TEXT NOT NULL,
             author TEXT NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
 
-    # ANNOUNCEMENTS TABLE
+    # ANNOUNCEMENTS
     cur.execute("""
         CREATE TABLE IF NOT EXISTS announcements (
             id SERIAL PRIMARY KEY,
@@ -64,8 +62,8 @@ def init_db():
 
     conn.commit()
 
-    # CREATE ADMIN USER
-    cur.execute("SELECT * FROM users WHERE username = %s", ("admin",))
+    # ADMIN ACCOUNT
+    cur.execute("SELECT * FROM users WHERE username=%s", ("admin",))
     if not cur.fetchone():
         cur.execute(
             "INSERT INTO users (username, password) VALUES (%s, %s)",
@@ -76,20 +74,19 @@ def init_db():
     conn.close()
 
 
-# IMPORTANT: run once safely
 init_db()
 
 
-# ----------------------------
+# ------------------------
 # HOME PAGE
-# ----------------------------
+# ------------------------
 @app.route("/", methods=["GET"])
 def index():
     conn = get_db()
     cur = conn.cursor()
 
     cur.execute("""
-        SELECT id, title, author, created_at
+        SELECT id, content, author, created_at
         FROM pastes
         ORDER BY id DESC
     """)
@@ -98,13 +95,12 @@ def index():
     return render_template("index.html", pastes=pastes)
 
 
-# ----------------------------
-# CREATE NEW PASTE (FIXED ENDPOINT)
-# ----------------------------
+# ------------------------
+# NEW PASTE (FIXED ENDPOINT)
+# ------------------------
 @app.route("/paste/new", methods=["GET", "POST"])
 def new_paste():
     if request.method == "POST":
-        title = request.form.get("title")
         content = request.form.get("content")
         author = session.get("user", "anonymous")
 
@@ -112,8 +108,8 @@ def new_paste():
         cur = conn.cursor()
 
         cur.execute(
-            "INSERT INTO pastes (title, content, author) VALUES (%s, %s, %s)",
-            (title, content, author)
+            "INSERT INTO pastes (content, author) VALUES (%s, %s)",
+            (content, author)
         )
         conn.commit()
 
@@ -122,48 +118,47 @@ def new_paste():
     return render_template("new_paste.html")
 
 
-# ----------------------------
-# VIEW SINGLE PASTE
-# ----------------------------
+# ------------------------
+# VIEW PASTE
+# ------------------------
 @app.route("/paste/<int:paste_id>")
 def paste(paste_id):
     conn = get_db()
     cur = conn.cursor()
 
     cur.execute("""
-        SELECT id, title, content, author, created_at
+        SELECT id, content, author, created_at
         FROM pastes
-        WHERE id = %s
+        WHERE id=%s
     """, (paste_id,))
 
     paste = cur.fetchone()
 
     if not paste:
-        return "Paste not found", 404
+        return "Not found", 404
 
     return render_template("paste.html", paste=paste)
 
 
-# ----------------------------
+# ------------------------
 # LOGIN
-# ----------------------------
+# ------------------------
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        username = request.form.get("username")
-        password = request.form.get("password")
+        u = request.form.get("username")
+        p = request.form.get("password")
 
         conn = get_db()
         cur = conn.cursor()
 
         cur.execute(
             "SELECT username FROM users WHERE username=%s AND password=%s",
-            (username, password)
+            (u, p)
         )
-        user = cur.fetchone()
 
-        if user:
-            session["user"] = username
+        if cur.fetchone():
+            session["user"] = u
             return redirect(url_for("index"))
 
         return "Invalid login", 401
@@ -171,18 +166,18 @@ def login():
     return render_template("login.html")
 
 
-# ----------------------------
-# LOGOUT (FIX FOR navbar)
-# ----------------------------
+# ------------------------
+# LOGOUT
+# ------------------------
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect(url_for("index"))
 
 
-# ----------------------------
-# ANNOUNCEMENTS (FIX FOR navbar)
-# ----------------------------
+# ------------------------
+# ANNOUNCEMENTS (FIX FOR NAVBAR)
+# ------------------------
 @app.route("/announcements")
 def announcements():
     conn = get_db()
@@ -193,13 +188,27 @@ def announcements():
         FROM announcements
         ORDER BY id DESC
     """)
-
     data = cur.fetchall()
+
     return render_template("announcements.html", announcements=data)
 
 
-# ----------------------------
-# RUN APP
-# ----------------------------
+# ------------------------
+# STAFF PAGE (FIX FOR NAVBAR ERROR)
+# ------------------------
+@app.route("/staff")
+def staff_list():
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute("SELECT id, username FROM users ORDER BY id DESC")
+    users = cur.fetchall()
+
+    return render_template("staff_list.html", users=users)
+
+
+# ------------------------
+# RUN
+# ------------------------
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5000)
