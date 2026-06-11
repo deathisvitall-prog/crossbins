@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Crossbin — 404</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='crossbin.svg') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='files/crossbin.css') }}">
+</head>
+<body>
+{% include "navbar.html" %}
+<div class="db-404">
+    <h1>404</h1>
+    <p>This paste doesn't exist or has been removed.</p>
+    <p><a href="/">Return to home</a></p>
+</div>
+</body>
+</html>
