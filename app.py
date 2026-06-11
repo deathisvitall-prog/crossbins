@@ -11,12 +11,8 @@ app.secret_key = "change_this_key"
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 def get_db():
-    """
-    Safe Render Postgres connection
-    """
     if not DATABASE_URL:
         raise Exception("DATABASE_URL not set")
-
     return psycopg2.connect(DATABASE_URL, sslmode="require")
 
 
@@ -24,7 +20,7 @@ def init_db():
     conn = get_db()
     cur = conn.cursor()
 
-    # USERS
+    # USERS TABLE
     cur.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY,
@@ -33,18 +29,20 @@ def init_db():
         )
     """)
 
-    # PASTES
+    # PASTES TABLE (safe schema fix)
     cur.execute("""
         CREATE TABLE IF NOT EXISTS pastes (
-            id SERIAL PRIMARY KEY,
-            title TEXT,
-            content TEXT,
-            author TEXT
+            id SERIAL PRIMARY KEY
         )
     """)
 
+    # FIX OLD/INCOMPLETE TABLES
+    cur.execute("ALTER TABLE pastes ADD COLUMN IF NOT EXISTS title TEXT")
+    cur.execute("ALTER TABLE pastes ADD COLUMN IF NOT EXISTS content TEXT")
+    cur.execute("ALTER TABLE pastes ADD COLUMN IF NOT EXISTS author TEXT")
+
     # ADMIN ACCOUNT
-    cur.execute("SELECT * FROM users WHERE username='admin'")
+    cur.execute("SELECT username FROM users WHERE username=%s", ("admin",))
     if not cur.fetchone():
         cur.execute(
             "INSERT INTO users (username, password) VALUES (%s, %s)",
@@ -55,15 +53,13 @@ def init_db():
     conn.close()
 
 
-# IMPORTANT: only run once safely
 try:
     init_db()
 except Exception as e:
-    print("DB init skipped/failed:", e)
-
+    print("DB init warning:", e)
 
 # -----------------------------
-# ROUTES (KEEP ORIGINAL STYLE)
+# ROUTES
 # -----------------------------
 
 @app.route("/")
@@ -79,7 +75,7 @@ def index():
     return render_template("index.html", pastes=pastes)
 
 
-# FIX: your missing endpoint
+# FIX: missing route from your navbar error
 @app.route("/new_paste")
 def new_paste():
     return redirect(url_for("paste"))
@@ -88,8 +84,8 @@ def new_paste():
 @app.route("/paste", methods=["GET", "POST"])
 def paste():
     if request.method == "POST":
-        title = request.form["title"]
-        content = request.form["content"]
+        title = request.form.get("title")
+        content = request.form.get("content")
         author = session.get("user", "guest")
 
         conn = get_db()
@@ -122,7 +118,7 @@ def view_paste(pid):
 
 
 # -----------------------------
-# LOGIN (unchanged style)
+# LOGIN
 # -----------------------------
 @app.route("/login", methods=["GET", "POST"])
 def login():
